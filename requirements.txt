@@ -1,0 +1,6 @@
+fastapi
+langserve
+langchain_upstage
+python-dotenv
+uvicorn
+sse_starlette
