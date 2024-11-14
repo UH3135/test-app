@@ -1,27 +1,33 @@
-from chain import chain
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+from typing import Any, List, Union
+from pydantic import BaseModel, Field
+from langchain_core.messages import HumanMessage, AIMessage, FunctionMessage
 from fastapi.responses import RedirectResponse
+from fastapi import FastAPI
+from agent import agent_executor
 from langserve import add_routes
 
+# app 생성
 app = FastAPI()
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-    expose_headers=["*"],
-)
 
-@app.get("/")
-async def redirect_root_to_docs():
-    return RedirectResponse("/chat/playground")
-add_routes(app, chain, path="/chat")
+
+class Input(BaseModel):
+    input: str
+    chat_history: List[Union[HumanMessage, AIMessage, FunctionMessage]] = Field(
+        ...,
+        extra={"widget": {"type": "chat", "input": "input", "output": "output"}},
+    )
+
+
+class Output(BaseModel):
+    output: Any
+
+add_routes(
+    app,
+    agent_executor.with_types(input_type=Input, output_type=Output).with_config(
+        {"run_name": "agent"}
+    ),
+)
 
 if __name__ == "__main__":
     import uvicorn
-    
-    uvicorn.run(app, host="localhost", port=8080)
-    # http://localhost:8000/chat/playground/
-    # 위 링크에 접속
+    uvicorn.run(app, host="localhost", port=8000)
